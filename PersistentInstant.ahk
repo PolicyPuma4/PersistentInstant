@@ -12,7 +12,8 @@
 FILE_MAP_READ := 0x4
 A_LocalAppData := EnvGet("LOCALAPPDATA")
 
-getPortSecret() {
+
+setInstantReplay(status) {
     hMapFile := DllCall("OpenFileMapping", "Ptr", FILE_MAP_READ, "Int", 0, "Str", "{8BA1E16C-FC54-4595-9782-E370A5FBE8DA}")
     if not hMapFile {
         return
@@ -29,19 +30,13 @@ getPortSecret() {
     DllCall("UnmapViewOfFile", "Ptr", pBuf)
     DllCall("CloseHandle", "Ptr", hMapFile)
 
-    return {
-        port: SubStr(string, 9, 5),
-        secret: SubStr(string, 25, 32),
-    }
+    whr := ComObject("WinHttp.WinHttpRequest.5.1")
+    whr.Open("POST", "http://localhost:" SubStr(string, 9, 5) "/ShadowPlay/v.1.0/InstantReplay/Enable", false)
+    whr.SetRequestHeader("X_LOCAL_SECURITY_COOKIE", SubStr(string, 25, 32))
+    whr.SetRequestHeader("Content-Type", "application/json")
+    whr.Send("{`"status`":" (status ? "true" : "false") "}")
 }
 
-enableInstantReplay(portSecret) {
-    whr := ComObject("WinHttp.WinHttpRequest.5.1")
-    whr.Open("POST", "http://localhost:" portSecret.port "/ShadowPlay/v.1.0/InstantReplay/Enable", false)
-    whr.SetRequestHeader("X_LOCAL_SECURITY_COOKIE", portSecret.secret)
-    whr.SetRequestHeader("Content-Type", "application/json")
-    whr.Send("{`"status`":true}")
-}
 
 arg := A_Args.Length ? A_Args[1] : ""
 installPath := A_LocalAppData "\Programs\PersistentInstant"
@@ -81,20 +76,51 @@ if (not A_ScriptDir = installPath) {
     ExitApp
 }
 
+if (not FileExist("denylist.txt")) {
+    FileAppend("`"C:\Windows\system32\wwahost.exe`" -ServerName:Netflix.App.wwa`r`n`"C:\Program Files\WindowsApps\AmazonVideo.PrimeVideo_1.0.84.0_x64__pwbj9vvecjh7j\PrimeVideo.exe`" -ServerName:App.AppX21qthfa64w8vh9emhw9pfwse20vpg5n9.mca`r`n", "denylist.txt")
+}
+
 if (not FileExist("allowlist.txt")) {
-    FileAppend("`"C:\Windows\system32\wwahost.exe`" -ServerName:Netflix.App.wwa`n`"C:\Program Files\WindowsApps\AmazonVideo.PrimeVideo_1.0.84.0_x64__pwbj9vvecjh7j\PrimeVideo.exe`" -ServerName:App.AppX21qthfa64w8vh9emhw9pfwse20vpg5n9.mca`n", "allowlist.txt")
+    FileAppend("", "allowlist.txt")
 }
 
 A_IconTip := "PersistentInstant"
 A_TrayMenu.Add()
-A_TrayMenu.Add("Edit allow list", editAllowList)
+A_TrayMenu.Add("Edit deny list", menuHandler)
+A_TrayMenu.Add("Edit allow list", menuHandler)
 
-editAllowList(*) {
-    Run("notepad.exe " installPath "\allowlist.txt")
+
+menuHandler(itemName, *) {
+    if (itemName = "Edit deny list") {
+        Run("notepad.exe " installPath "\denylist.txt")
+    }
+
+    if (itemName = "Edit allow list") {
+        Run("notepad.exe " installPath "\allowlist.txt")
+    }
 }
 
-allowedProcesses := StrSplit(FileRead("allowlist.txt"), "`n", "`r")
 
+deny := StrSplit(Trim(FileRead("denylist.txt"), "`r`n"), "`r`n")
+allow := StrSplit(Trim(FileRead("allowlist.txt"), "`r`n"), "`r`n")
+
+
+exists(items) {
+    for process in ComObjGet("winmgmts:").ExecQuery("Select * from Win32_Process") {
+        for item in items {
+            if (InStr(process.CommandLine, item) = 1) {
+                return process.ProcessId
+            }
+
+            if (InStr(process.ExecutablePath, item) = 1) {
+                return process.ProcessId
+            }
+        }
+    }
+}
+
+
+monitoringProcess := false
 sleepTime := 1 * 60 * 1000
 loop {
     if (A_Index > 1) {
@@ -103,40 +129,25 @@ loop {
 
     isEnabled := RegRead("HKEY_CURRENT_USER\SOFTWARE\NVIDIA Corporation\Global\ShadowPlay\NVSPCAPS", "{1B1D3DAA-601D-49E5-8508-81736CA28C6D}", "")
     if (isEnabled) {
-        continue
-    }
-
-    isAllowed := false
-    for process in ComObjGet("winmgmts:").ExecQuery("Select * from Win32_Process") {
-        for allowedProcess in allowedProcesses {
-            if (not allowedProcess) {
-                continue
-            }
-
-            if (InStr(process.CommandLine, allowedProcess) = 1) {
-                isAllowed := true
-                break
-            }
-
-            if (InStr(process.ExecutablePath, allowedProcess) = 1) {
-                isAllowed := true
-                break
-            }
+        if (allow.Length and not ProcessExist(monitoringProcess)) {
+            setInstantReplay(false)
         }
 
-        if (isAllowed) {
-            break
+        continue
+    }
+
+    if (allow.Length) {
+        monitoringProcess := exists(allow)
+        if monitoringProcess {
+            setInstantReplay(true)
         }
-    }
 
-    if (isAllowed) {
         continue
     }
 
-    portSecret := getPortSecret()
-    if (not portSecret) {
+    if (exists(deny)) {
         continue
     }
 
-    enableInstantReplay(portSecret)
+    setInstantReplay(true)
 }
