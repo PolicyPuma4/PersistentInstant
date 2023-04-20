@@ -30,6 +30,7 @@ WizardStyle=modern
 AppMutex=PersistentInstant
 SetupIconFile=shell32_260.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}.exe
+ArchitecturesInstallIn64BitMode=x64 
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
