@@ -5,7 +5,7 @@
 #define MyAppVersion "v0.3"
 #define MyAppPublisher "PolicyPuma4"
 #define MyAppURL "https://github.com/PolicyPuma4/PersistentInstant"
-#define MyAppExeName "PersistentInstant"
+#define MyAppExeName "PersistentInstant.exe"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
@@ -22,14 +22,14 @@ DefaultDirName={userpf}\{#MyAppName}
 DisableProgramGroupPage=yes
 ; Remove the following line to run in administrative install mode (install for all users.)
 PrivilegesRequired=lowest
-OutputBaseFilename={#MyAppExeName}_Setup
+OutputBaseFilename={#MyAppName}_Setup
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 
 AppMutex=PersistentInstant
 SetupIconFile=shell32_260.ico
-UninstallDisplayIcon={app}\{#MyAppExeName}.exe
+UninstallDisplayIcon={app}\{#MyAppExeName}
 ArchitecturesInstallIn64BitMode=x64 
 
 [Languages]
@@ -41,8 +41,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "startup"; Description: "Start when I log on"
 
 [Files]
-Source: "{#MyAppExeName}_Unicode_32.exe"; DestDir: "{app}"; DestName: "{#MyAppExeName}.exe"; Check: not Is64BitInstallMode; Flags: ignoreversion
-Source: "{#MyAppExeName}_Unicode_64.exe"; DestDir: "{app}"; DestName: "{#MyAppExeName}.exe"; Check: Is64BitInstallMode; Flags: ignoreversion
+Source: "{#MyAppName}_Unicode_32.exe"; DestDir: "{app}"; DestName: "{#MyAppExeName}"; Check: not Is64BitInstallMode; Flags: ignoreversion
+Source: "{#MyAppName}_Unicode_64.exe"; DestDir: "{app}"; DestName: "{#MyAppExeName}"; Check: Is64BitInstallMode; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
