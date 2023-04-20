@@ -12,7 +12,6 @@ hMutex := DllCall("CreateMutex", "Int", 0, "Int", 0, "Str", "PersistentInstant")
 OnExit((*) => DllCall("ReleaseMutex", "Ptr", hMutex))
 
 FILE_MAP_READ := 0x4
-A_LocalAppData := EnvGet("LOCALAPPDATA")
 
 
 setInstantReplay(status) {
