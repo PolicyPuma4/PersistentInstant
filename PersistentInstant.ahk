@@ -1,13 +1,15 @@
 ﻿; Repository https://github.com/PolicyPuma4/PersistentInstant
 
 #Requires AutoHotkey v2.0
-#SingleInstance Force
 
 ;@Ahk2Exe-SetMainIcon shell32_260.ico
 
 ;@Ahk2Exe-Obey U_bits, = %A_PtrSize% * 8
 ;@Ahk2Exe-Obey U_type, = "%A_IsUnicode%" ? "Unicode" : "ANSI"
 ;@Ahk2Exe-ExeName %A_ScriptName~\.[^\.]+$%_%U_type%_%U_bits%
+
+hMutex := DllCall("CreateMutex", "Int", 0, "Int", 0, "Str", "PersistentInstant")
+OnExit((*) => DllCall("ReleaseMutex", "Ptr", hMutex))
 
 FILE_MAP_READ := 0x4
 A_LocalAppData := EnvGet("LOCALAPPDATA")
@@ -38,50 +40,12 @@ setInstantReplay(status) {
 }
 
 
-arg := A_Args.Length ? A_Args[1] : ""
-installPath := A_LocalAppData "\Programs\PersistentInstant"
-installFullPath := installPath "\PersistentInstant.exe"
-if (arg = "uninstall") {
-    RegWrite("`"C:\Windows\System32\cmd.exe`" /C RMDIR /S /Q `"" installPath "`"", "REG_SZ", "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce", "PersistentInstant")
-    FileDelete(A_Programs "\PersistentInstant.lnk")
-    FileDelete(A_Programs "\Startup\PersistentInstant.lnk")
-    RegDeleteKey("HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PersistentInstant")
-    MsgBox("I can't believe you've done this! Just for that you're going to have to restart your system to complete what you have started!", "PersistentInstant")
-
-    ExitApp
-}
-
-if (not A_ScriptDir = installPath) {
-    if (FileExist(installFullPath)) {
-        MsgBox("Slow down there bud! A version of me is already installed, uninstall the old me before you try the new me!", "PersistentInstant")
-
-        ExitApp
-    }
-
-    DirCreate(installPath)
-    FileCopy(A_ScriptFullPath, installFullPath)
-    FileCreateShortcut(installFullPath, A_Programs "\PersistentInstant.lnk")
-    FileCreateShortcut(installFullPath, A_Programs "\Startup\PersistentInstant.lnk")
-
-    RegWrite("`"" installFullPath "`"", "REG_SZ", "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PersistentInstant", "DisplayIcon")
-    RegWrite("PersistentInstant", "REG_SZ", "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PersistentInstant", "DisplayName")
-    RegWrite(installPath, "REG_SZ", "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PersistentInstant", "InstallLocation")
-    RegWrite(0x00000001, "REG_DWORD", "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PersistentInstant", "NoModify")
-    RegWrite(0x00000001, "REG_DWORD", "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PersistentInstant", "NoRepair")
-    RegWrite("`"" installFullPath "`" uninstall", "REG_SZ", "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PersistentInstant", "UninstallString")
-
-    Run(installFullPath)
-    MsgBox("Welcome aboard! This is a comfy system! I hope you don't mind me chilling out in the system tray.", "PersistentInstant")
-
-    ExitApp
-}
-
 if (not FileExist("denylist.txt")) {
     FileAppend("`"C:\Windows\system32\wwahost.exe`" -ServerName:Netflix.App.wwa`r`n`"C:\Program Files\WindowsApps\AmazonVideo.PrimeVideo_1.0.84.0_x64__pwbj9vvecjh7j\PrimeVideo.exe`" -ServerName:App.AppX21qthfa64w8vh9emhw9pfwse20vpg5n9.mca`r`n", "denylist.txt")
 }
 
 if (not FileExist("allowlist.txt")) {
-    FileAppend("", "allowlist.txt")
+    FileAppend("`r`n", "allowlist.txt")
 }
 
 A_IconTip := "PersistentInstant"
@@ -92,11 +56,11 @@ A_TrayMenu.Add("Edit allow list", menuHandler)
 
 menuHandler(itemName, *) {
     if (itemName = "Edit deny list") {
-        Run("notepad.exe " installPath "\denylist.txt")
+        Run("notepad.exe denylist.txt")
     }
 
     if (itemName = "Edit allow list") {
-        Run("notepad.exe " installPath "\allowlist.txt")
+        Run("notepad.exe allowlist.txt")
     }
 }
 
